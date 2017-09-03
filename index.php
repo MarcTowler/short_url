@@ -1,26 +1,33 @@
 <?php
-include "include/config.php";
-include "include/ShortUrl.php";
+require_once "include/config.php";
+require_once "include/ShortUrl.php";
+
+if (empty($_SERVER['REQUEST_URI'])) {
+    header("Location: shorten.html");
+    exit;
+}
+$code = $_SERVER['REQUEST_URI'];
+
+$referral = explode('/', $_SERVER['HTTP_REFERER']);
+
+$referrer = $referral[2];
 
 try {
-    $pdo = new PDO(DB_PDODRIVER . ":host=" . DB_HOST .
-        ";dbname=" . DB_DATABASE,
+    $pdo = new PDO(DB_PDODRIVER . ":host=" . DB_HOST . ";dbname=" . DB_DATABASE,
         DB_USERNAME, DB_PASSWORD);
 }
-catch (PDOException $e) {
-    trigger_error("Error: Failed to establish connection to database.");
+catch (\PDOException $e) {
+    header("Location: error.html");
     exit;
 }
-
 $shortUrl = new ShortUrl($pdo);
 try {
-    $code = $shortUrl->urlToShortCode($_POST["url"]);
-    printf('<p><strong>Short URL:</strong> <a href="%s">%1$s</a></p>',
-        SHORTURL_PREFIX . $code);
-    exit;
+    $url = $shortUrl->shortCodeToUrl($code);
+    header("HTTP/1.1 301 Moved Permanently");
+    header("Location: " . $url);
 }
-catch (Exception $e) {
-    // log exception and then redirect to error page.
-    header("Location: /error");
+catch (\Exception $e) {
+    print_r($e);
+    header("Location: error.html");
     exit;
 }
